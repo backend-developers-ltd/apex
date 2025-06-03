@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import numpy as np
 from loguru import logger
@@ -12,6 +12,8 @@ class ModelConfig(BaseModel):
     reward: float
     min_ram: float
     model_config = ConfigDict(frozen=True)
+    use_remote_vllm: bool = False  # Use Remote VLLM if enabled
+    remote_vllm_url: Optional[str] = None  # URL to remote machine with ReproducibleVLLM
 
     def __hash__(self):
         return hash((self.llm_model_id, self.reward, self.min_ram))
@@ -34,6 +36,7 @@ class ModelZoo:
                 llm_model_id=model,
                 reward=1 / len(models),
                 min_ram=settings.shared_settings.MAX_ALLOWED_VRAM_GB,
+                use_remote_vllm=settings.shared_settings.USE_REMOTE_VLLM,
             )
         )
 
@@ -43,7 +46,7 @@ class ModelZoo:
 
     @classmethod
     def get_random(cls, max_ram: float = np.inf) -> ModelConfig:
-        models = [model for model in cls.models_configs if model.min_ram <= max_ram]
+        models = [model for model in cls.models_configs if model.min_ram <= max_ram or model.use_remote_vllm]
         if len(models) == 0:
             raise Exception(f"No model with < {max_ram}GB memory requirements found")
         return np.random.choice(models)

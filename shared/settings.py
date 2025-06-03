@@ -150,6 +150,7 @@ class SharedSettings(BaseSettings):
     LLM_MODEL: list[str] = [
         "mrfakename/mistral-small-3.1-24b-instruct-2503-hf",
     ]
+    USE_REMOTE_VLLM: bool = Field(False, env="USE_REMOTE_VLLM")
     SAMPLING_PARAMS: dict[str, Any] = {
         "temperature": 0.7,
         "top_p": 0.95,
