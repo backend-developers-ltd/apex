@@ -11,7 +11,9 @@ class ChatMessage(BaseModel):
 class SamplingParameters(BaseModel):
     temperature: Optional[float] = 1.0
     top_p: Optional[float] = 1.0
-    max_tokens: Optional[int] = 512
+    max_tokens: Optional[int] = None
+    max_new_tokens: Optional[int] = None
+    max_completion_tokens: Optional[int] = None
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     top_k: Optional[int] = -1

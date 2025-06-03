@@ -191,6 +191,11 @@ class SharedSettings(BaseSettings):
     }
     model_config = {"frozen": True, "arbitrary_types_allowed": False}
 
+    # SN12 settings
+    USE_REMOTE_VLLM: bool = Field(False, env="USE_REMOTE_VLLM")
+    FACILITATOR_URL: str = Field("http://localhost:9000", env="FACILITATOR_URL")
+    # ==============
+
     @model_validator(mode="before")
     def validate_mode(cls, v):
         if v["mode"] == "api":

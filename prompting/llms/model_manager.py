@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict
 
 from prompting.llms.model_zoo import ModelConfig, ModelZoo
+from prompting.llms.remote_vllm_client import RemoteVLLMClient
 from prompting.llms.utils import GPUInfo, model_factory
 from prompting.llms.vllm_llm import ReproducibleVLLM
 from shared import settings
@@ -50,13 +51,13 @@ class AsyncRLock:
 class ModelManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     total_ram: float = settings.shared_settings.LLM_MODEL_RAM
-    active_models: dict[ModelConfig, ReproducibleVLLM] = {}
+    active_models: dict[ModelConfig, ReproducibleVLLM | RemoteVLLMClient] = {}
     loading_tasks: dict[ModelConfig, asyncio.Future] = {}
     used_ram: float = 0.0
     lock: ClassVar[AsyncRLock] = AsyncRLock()
     # lock: ClassVar[AsyncRLock] = asyncio.Lock()
 
-    async def load_model(self, model_config: ModelConfig, force: bool = True) -> ReproducibleVLLM:
+    async def load_model(self, model_config: ModelConfig, force: bool = True) -> ReproducibleVLLM | RemoteVLLMClient:
         """Load model into GPU.
 
         Warning: This operation will block execution until the model is successfully loaded into VRAM.
@@ -80,6 +81,25 @@ class ModelManager(BaseModel):
                     await self._unload_model(active_model)
                 await self.cleanup()
 
+            if model_config.use_remote_vllm:
+                # Use SN12 RemoteVLLMClient instead of local ReproducibleVLLM without loading model into GPU VRAM
+                try:
+                    logger.info(f"[RemoteVLLMClient] Model {model_config.llm_model_id} SN12 Job Creation")
+                    remote_model_client = RemoteVLLMClient(
+                        llm_model_docker_image="backenddevelopersltd/ch-sn1-job:latest",  # TODO switch to dynamic name using llm_model_id
+                        facilitator_url=settings.shared_settings.FACILITATOR_URL,
+                        job_namespace="SN1.VLLM",
+                    )
+                    await remote_model_client.create_job_remote_vllm()
+                    self.active_models[model_config] = remote_model_client
+                    GPUInfo.log_gpu_info()
+                    logger.info(
+                        f"[RemoteVLLMClient] Remote Model {model_config.llm_model_id} has been successfully loaded."
+                    )
+                    return remote_model_client
+                except Exception as e:
+                    raise Exception(f"Failed to connect to remote model {model_config.llm_model_id}: {e}")
+
             try:
                 GPUInfo.log_gpu_info()
                 model_class = model_factory(model_config.llm_model_id)
@@ -101,7 +121,7 @@ class ModelManager(BaseModel):
                 # In case of VRAM leak, raise an exception to terminate the process.
                 raise MemoryError(f"Failed to load model {model_config.llm_model_id}: {e}")
 
-    async def _cleanup_model(self, model_instance: ReproducibleVLLM, cpu_offload: bool = False):
+    async def _cleanup_model(self, model_instance: ReproducibleVLLM | RemoteVLLMClient, cpu_offload: bool = False):
         """Free VRAM from given model."""
         if cpu_offload:
             try:
@@ -116,7 +136,10 @@ class ModelManager(BaseModel):
             except Exception as e:
                 logger.exception(f"Unexpected error when moving model to CPU: {str(e)}")
 
-        model_instance.unload_model()
+        if isinstance(model_instance, RemoteVLLMClient):
+            await model_instance.unload_model()
+        elif isinstance(model_instance, ReproducibleVLLM):
+            model_instance.unload_model()
         del model_instance
 
     async def _unload_model(self, model_config: ModelConfig):
@@ -143,7 +166,7 @@ class ModelManager(BaseModel):
 
         GPUInfo.log_gpu_info()
 
-    async def get_model(self, llm_model: ModelConfig | str) -> ReproducibleVLLM:
+    async def get_model(self, llm_model: ModelConfig | str) -> ReproducibleVLLM | RemoteVLLMClient:
         async with self.lock:
             if not llm_model:
                 llm_model = next(iter(self.active_models.keys())) if self.active_models else ModelZoo.get_random()
@@ -173,7 +196,7 @@ class ModelManager(BaseModel):
             if not model:
                 model = ModelZoo.get_random(max_ram=self.total_ram)
 
-        model_instance: ReproducibleVLLM = await self.get_model(model)
+        model_instance: ReproducibleVLLM | RemoteVLLMClient = await self.get_model(model)
 
         async with self.lock:
             if model_instance is None:
@@ -192,7 +215,7 @@ class ModelManager(BaseModel):
         continue_last_message: bool = False,
         top_logprobs: int = 10,
     ):
-        model_instance: ReproducibleVLLM = await self.get_model(model)
+        model_instance: ReproducibleVLLM | RemoteVLLMClient = await self.get_model(model)
         return await model_instance.generate_logits(
             messages=messages,
             sampling_params=sampling_params,
@@ -259,7 +282,6 @@ class AsyncModelScheduler(AsyncLoopRunner):
         if selected_model in self.llm_model_manager.active_models:
             logger.info(f"Model {selected_model.llm_model_id} is already loaded.")
             return
-
         try:
             await self.llm_model_manager.load_model(selected_model)
         except MemoryError as e:
