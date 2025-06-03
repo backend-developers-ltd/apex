@@ -1,7 +1,8 @@
+import asyncio
 import os
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from schema import ChatRequest, LogitsRequest
 from vllm_llm import ReproducibleVLLM
@@ -13,8 +14,14 @@ class ReproducibleVllmApp:
     def __init__(self):
         self.llm = ReproducibleVLLM(model_id=MODEL_PATH)
         self.app = FastAPI()
+
+        self.app.get("/health")(self.health)
+        self.app.post("/terminate")(self.terminate)
         self.app.post("/generate")(self.generate)
         self.app.post("/generate_logits")(self.generate_logits)
+
+    async def health(self):
+        return JSONResponse(status_code=200, content={"status": "OK"})
 
     async def generate(self, request: ChatRequest):
         try:
@@ -40,6 +47,16 @@ class ReproducibleVllmApp:
             return {"logits": logits, "prompt": prompt}
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": str(e)})
+
+    async def terminate(self, request: Request):
+        response = JSONResponse(status_code=200, content={"status": "OK"})
+        asyncio.create_task(self.shutdown_after_delay(1))
+        return response
+
+    async def shutdown_after_delay(self, delay_seconds: int = 1):
+        await asyncio.sleep(delay_seconds)
+        print("Terminating server on request.")
+        os._exit(0)
 
     def run(self):
         uvicorn.run(self.app, host="0.0.0.0", port=8000)
