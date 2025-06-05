@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Tuple
 
 import aiohttp
 from loguru import logger
-from vllm_llm import ReproducibleVLLM
 
 
 @dataclass

@@ -151,7 +151,7 @@ class SharedSettings(BaseSettings):
         "mrfakename/mistral-small-3.1-24b-instruct-2503-hf",
     ]
     USE_REMOTE_VLLM: bool = Field(False, env="USE_REMOTE_VLLM")
-    FACILITATOR_URL: bool = Field("http://localhost:9000", env="FACILITATOR_URL")
+    FACILITATOR_URL: str = Field("http://localhost:9000", env="FACILITATOR_URL")
     SAMPLING_PARAMS: dict[str, Any] = {
         "temperature": 0.7,
         "top_p": 0.95,

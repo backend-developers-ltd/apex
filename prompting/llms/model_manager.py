@@ -6,8 +6,8 @@ from typing import ClassVar
 import torch
 from loguru import logger
 from pydantic import BaseModel, ConfigDict
-from remote_vllm_client import RemoteVLLMClient
-from remote_vllm_runner import ComputeHordeJobCreator
+from prompting.llms.remote_vllm_client import RemoteVLLMClient
+from prompting.llms.remote_vllm_runner import ComputeHordeJobCreator
 
 from prompting.llms.model_zoo import ModelConfig, ModelZoo
 from prompting.llms.utils import GPUInfo, model_factory
