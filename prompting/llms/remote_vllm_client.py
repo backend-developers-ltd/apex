@@ -158,7 +158,8 @@ class RemoteVLLMClient:
                 logger.warning(f"[RemoteVLLMClient] Streaming job not in progress (attempt {attempt}).")
 
                 async with self._job_creation_lock:
-                    # Create new job
+                    if self.streaming_job.status.is_streaming_ready():
+                        return
                     await self.create_job_remote_vllm()
                 return
 
