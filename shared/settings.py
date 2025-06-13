@@ -193,6 +193,7 @@ class SharedSettings(BaseSettings):
 
     # SN12 settings
     USE_REMOTE_VLLM: bool = Field(False, env="USE_REMOTE_VLLM")
+    SN12_WALLETS_DIRECTORY: str = Field("wallets_sn12", env="SN12_WALLETS_DIRECTORY")
     FACILITATOR_URL: str = Field("http://localhost:9000", env="FACILITATOR_URL")
     # ==============
 

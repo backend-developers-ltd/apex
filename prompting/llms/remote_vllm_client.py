@@ -17,6 +17,7 @@ from cryptography.x509 import Certificate
 from loguru import logger
 
 from prompting.llms.vllm_llm import ReproducibleVLLM
+from shared import settings
 
 
 @dataclass
@@ -67,7 +68,11 @@ class RemoteVLLMClient:
         self.job_namespace = job_namespace
 
         self.wallet = bittensor.wallet(
-            name="validator", hotkey="default", path=(pathlib.Path(__file__).parent / "wallets").as_posix()
+            name="validator",
+            hotkey="default",
+            path=(
+                pathlib.Path(__file__).resolve().parents[2] / settings.shared_settings.SN12_WALLETS_DIRECTORY
+            ).as_posix(),
         )
         self.compute_horde_client = ComputeHordeClient(
             hotkey=self.wallet.hotkey,
@@ -249,7 +254,9 @@ class RemoteVLLMClient:
             )
             if resp.status_code != 200:
                 self.active = False
-                raise RuntimeError(f"[RemoteVLLMClient] Remote generate_logits failed: {data.get('error', 'Unknown error')}")
+                raise RuntimeError(
+                    f"[RemoteVLLMClient] Remote generate_logits failed: {data.get('error', 'Unknown error')}"
+                )
             return data.get("logits", {}), data.get("prompt", "")
 
     async def unload_model(self):
