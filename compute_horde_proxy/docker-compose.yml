@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  proxy-service:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./wallets:/app/app/wallets
+      - ./request_logs:/app/request_logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - proxy-network
+
+  gpu-container:
+    build:
+      context: ../gpu_container
+      dockerfile: Dockerfile
+    command: ["python", "app.py"]
+    volumes:
+      - gpu-container-data:/artifacts
+      - ../gpu_container:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - proxy-network
+
+volumes:
+  gpu-container-data:
+
+networks:
+  proxy-network:
+    driver: bridge

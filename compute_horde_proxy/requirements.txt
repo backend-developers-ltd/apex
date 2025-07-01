@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+httpx
+cryptography
+loguru
+bittensor
+compute_horde_sdk
