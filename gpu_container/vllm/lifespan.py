@@ -13,7 +13,7 @@ _executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 def load_config_from_env():
     """Loads vLLM configuration from environment variables."""
     vllm_model_id = os.getenv("VLLM_MODEL_ID", "default_model_id")
-    hf_model_path = os.getenv("$HF_MODEL_PATH", None)  # Use pre-downloaded model
+    hf_model_path = os.getenv("HF_MODEL_PATH", None)  # Use pre-downloaded model
     device = os.getenv("DEVICE", "cuda")
     # Whether to block app startup until the engine is loaded
     block_startup = os.getenv("BLOCK_STARTUP", "true").lower() == "true"
