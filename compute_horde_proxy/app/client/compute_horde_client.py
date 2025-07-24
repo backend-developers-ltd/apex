@@ -53,73 +53,154 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
         Returns:
             A new ComputeHordeVLLMClient instance.
         """
-        wallet = bittensor.wallet(name=os.environ["BITTENSOR_WALLET_NAME"], hotkey=os.environ["BITTENSOR_WALLET_HOTKEY"], path=(pathlib.Path(__file__).parent.parent / "wallets").as_posix())
-        facilitator_url = os.environ["COMPUTE_HORDE_FACILITATOR_URL"]
-        client = ComputeHordeClient(
-            hotkey=wallet.hotkey,
-            compute_horde_validator_hotkey=os.environ["COMPUTE_HORDE_VALIDATOR_HOTKEY"],
-            facilitator_url=facilitator_url
-        )
+        try:
+            logger.info(f"Creating Compute Horde client for model: {model_id}, trusted: {trusted}")
 
-        # Get docker image from environment variable
-        # Replace slashes with double dashes for Huggingface models
-        docker_model_id = model_id.replace('/', '--')
+            # Initialize wallet
+            try:
+                wallet_name = os.environ["BITTENSOR_WALLET_NAME"]
+                wallet_hotkey = os.environ["BITTENSOR_WALLET_HOTKEY"]
+                wallet_path = (pathlib.Path(__file__).parent.parent / "wallets").as_posix()
+                logger.debug(f"Initializing wallet with name: {wallet_name}, hotkey: {wallet_hotkey}, path: {wallet_path}")
+                wallet = bittensor.wallet(name=wallet_name, hotkey=wallet_hotkey, path=wallet_path)
+                logger.debug(f"Wallet initialized successfully: {wallet.hotkey.ss58_address}")
+            except Exception as e:
+                logger.error(f"Failed to initialize wallet: {e}")
+                raise
 
-        # Convert to environment variable format (uppercase with underscores)
-        env_model_id = docker_model_id.replace('-', '_').upper()
+            # Initialize ComputeHordeClient
+            try:
+                facilitator_url = os.environ["COMPUTE_HORDE_FACILITATOR_URL"]
+                validator_hotkey = os.environ["COMPUTE_HORDE_VALIDATOR_HOTKEY"]
+                logger.debug(f"Initializing ComputeHordeClient with facilitator_url: {facilitator_url}, validator_hotkey: {validator_hotkey}")
+                client = ComputeHordeClient(
+                    hotkey=wallet.hotkey,
+                    compute_horde_validator_hotkey=validator_hotkey,
+                    facilitator_url=facilitator_url
+                )
+                logger.debug("ComputeHordeClient initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize ComputeHordeClient: {e}")
+                raise
 
-        # Try to get model-specific docker image, fall back to default format
-        model_specific_env_var = f"DOCKER_IMAGE_{env_model_id}"
-        if model_specific_env_var in os.environ:
-            docker_image = os.environ[model_specific_env_var]
-        else:
-            docker_image = os.environ["DEFAULT_DOCKER_IMAGE"]
+            # Get docker image from environment variable
+            try:
+                # Replace slashes with double dashes for Huggingface models
+                docker_model_id = model_id.replace('/', '--')
 
-        # Get job spec parameters from environment variables
-        # These are required in app.py validation
-        download_time_limit_sec = int(os.environ["COMPUTE_HORDE_DOWNLOAD_TIME_LIMIT_SEC"])
-        execution_time_limit_sec = int(os.environ["COMPUTE_HORDE_EXECUTION_TIME_LIMIT_SEC"])
-        streaming_start_time_limit_sec = int(os.environ["COMPUTE_HORDE_STREAMING_START_TIME_LIMIT_SEC"])
-        upload_time_limit_sec = int(os.environ["COMPUTE_HORDE_UPLOAD_TIME_LIMIT_SEC"])
+                # Convert to environment variable format (uppercase with underscores)
+                env_model_id = docker_model_id.replace('-', '_').upper()
 
-        job_spec = ComputeHordeJobSpec(
-            executor_class=ExecutorClass.always_on__llm__a6000,
-            job_namespace="SN1.VLLM",
-            docker_image=docker_image,
-            args=["python", "app.py"],
-            artifacts_dir="/artifacts",
-            streaming=True,
-            download_time_limit_sec=download_time_limit_sec,
-            execution_time_limit_sec=execution_time_limit_sec,
-            streaming_start_time_limit_sec=streaming_start_time_limit_sec,
-            upload_time_limit_sec=upload_time_limit_sec,
-        )
+                # Try to get model-specific docker image, fall back to default format
+                model_specific_env_var = f"DOCKER_IMAGE_{env_model_id}"
+                if model_specific_env_var in os.environ:
+                    docker_image = os.environ[model_specific_env_var]
+                    logger.debug(f"Using model-specific docker image: {docker_image}")
+                else:
+                    docker_image = os.environ["DEFAULT_DOCKER_IMAGE"]
+                    logger.debug(f"Using default docker image: {docker_image}")
+            except Exception as e:
+                logger.error(f"Failed to determine docker image: {e}")
+                raise
 
-        job = await client.create_job(job_spec, on_trusted_miner=trusted)
-        await job.wait_for_streaming(timeout=streaming_start_time_limit_sec)
+            # Get job spec parameters from environment variables
+            try:
+                # These are required in app.py validation
+                download_time_limit_sec = int(os.environ["COMPUTE_HORDE_DOWNLOAD_TIME_LIMIT_SEC"])
+                execution_time_limit_sec = int(os.environ["COMPUTE_HORDE_EXECUTION_TIME_LIMIT_SEC"])
+                streaming_start_time_limit_sec = int(os.environ["COMPUTE_HORDE_STREAMING_START_TIME_LIMIT_SEC"])
+                upload_time_limit_sec = int(os.environ["COMPUTE_HORDE_UPLOAD_TIME_LIMIT_SEC"])
+                logger.debug(f"Job spec parameters: download_time_limit_sec={download_time_limit_sec}, execution_time_limit_sec={execution_time_limit_sec}, streaming_start_time_limit_sec={streaming_start_time_limit_sec}, upload_time_limit_sec={upload_time_limit_sec}")
+            except Exception as e:
+                logger.error(f"Failed to get job spec parameters: {e}")
+                raise
 
-        ssl_context = cls._create_ssl_context(
-            job.streaming_public_cert,
-            job.streaming_private_key,
-            job.streaming_server_cert,
-        )
+            # Create job spec
+            try:
+                job_spec = ComputeHordeJobSpec(
+                    executor_class=ExecutorClass.always_on__llm__a6000,
+                    job_namespace="SN1.VLLM",
+                    docker_image=docker_image,
+                    args=["python", "app.py"],
+                    artifacts_dir="/artifacts",
+                    streaming=True,
+                    download_time_limit_sec=download_time_limit_sec,
+                    execution_time_limit_sec=execution_time_limit_sec,
+                    streaming_start_time_limit_sec=streaming_start_time_limit_sec,
+                    upload_time_limit_sec=upload_time_limit_sec,
+                )
+                logger.debug("Job spec created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create job spec: {e}")
+                raise
 
-        # Set the miner ID from the job
-        miner_id = job.uuid # TODO actual method to get
-        if not miner_id:
-            # If miner_id is not available directly, try to extract it from other attributes
-            miner_id = str(uuid.uuid4())  # Fallback to a random UUID
+            # Create job
+            try:
+                logger.info("Creating Compute Horde job...")
+                job = await client.create_job(job_spec, on_trusted_miner=trusted)
+                logger.info(f"Job created successfully with UUID: {job.uuid}")
+            except Exception as e:
+                logger.error(f"Failed to create job: {e}")
+                raise
 
-        miner_url = f"https://{job.streaming_server_address}:{job.streaming_server_port}"
-        instance = cls(model_id)
-        instance.endpoint_url = miner_url
-        instance.ssl_context = ssl_context
-        instance.miner_id = miner_id
-        instance.trusted = trusted
+            # Wait for streaming
+            try:
+                logger.info(f"Waiting for streaming to start (timeout: {streaming_start_time_limit_sec}s)...")
+                await job.wait_for_streaming(timeout=streaming_start_time_limit_sec)
+                logger.info("Streaming started successfully")
+            except Exception as e:
+                logger.error(f"Failed to wait for streaming: {e}")
+                raise
 
-        # Check if the remote model is ready
-        instance._ready = await cls.check_endpoint_health(miner_url, ssl_context)
-        return instance
+            # Create SSL context
+            try:
+                logger.debug("Creating SSL context...")
+                ssl_context = cls._create_ssl_context(
+                    job.streaming_public_cert,
+                    job.streaming_private_key,
+                    job.streaming_server_cert,
+                )
+                logger.debug("SSL context created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create SSL context: {e}")
+                raise
+
+            # Set the miner ID from the job
+            miner_id = job.uuid  # TODO actual method to get
+            if not miner_id:
+                # If miner_id is not available directly, try to extract it from other attributes
+                miner_id = str(uuid.uuid4())  # Fallback to a random UUID
+                logger.warning(f"Could not get miner ID from job, using fallback: {miner_id}")
+            else:
+                logger.debug(f"Using miner ID from job: {miner_id}")
+
+            # Create instance
+            try:
+                miner_url = f"https://{job.streaming_server_address}:{job.streaming_server_port}"
+                logger.debug(f"Miner URL: {miner_url}")
+                instance = cls(model_id)
+                instance.endpoint_url = miner_url
+                instance.ssl_context = ssl_context
+                instance.miner_id = miner_id
+                instance.trusted = trusted
+                logger.debug("Instance created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create instance: {e}")
+                raise
+
+            # Check if the remote model is ready
+            try:
+                logger.info("Checking if remote model is ready...")
+                instance._ready = await cls.check_endpoint_health(miner_url, ssl_context)
+                logger.info(f"Remote model is {'ready' if instance._ready else 'not ready'}")
+            except Exception as e:
+                logger.error(f"Failed to check if remote model is ready: {e}")
+                instance._ready = False
+
+            return instance
+        except Exception as e:
+            logger.error(f"Failed to create Compute Horde client: {e}")
+            raise
 
     @classmethod
     async def check_endpoint_health(cls, endpoint_url: str, ssl_context: ssl.SSLContext) -> bool:
@@ -133,15 +214,41 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
         Returns:
             True if the endpoint is healthy, False otherwise.
         """
-        for _ in range(240):
+        logger.info(f"Checking endpoint health: {endpoint_url}")
+        attempts = 0
+        max_attempts = 240  # 4 minutes
+
+        for _ in range(max_attempts):
+            attempts += 1
             try:
                 async with httpx.AsyncClient(verify=ssl_context) as client:
+                    logger.debug(f"Attempt {attempts}/{max_attempts}: Sending health check request to {endpoint_url}/health/model")
                     resp = await client.get(f"{endpoint_url}/health/model", timeout=3)
                     if resp.status_code == 200:
+                        logger.info(f"Endpoint {endpoint_url} is healthy (status code: 200)")
                         return True
-            except Exception:  # TODO handle exceptions
-                pass
+                    else:
+                        logger.warning(f"Endpoint {endpoint_url} returned non-200 status code: {resp.status_code}")
+            except httpx.ConnectError as e:
+                logger.debug(f"Connection error while checking endpoint health: {e}")
+            except httpx.ReadTimeout as e:
+                logger.debug(f"Read timeout while checking endpoint health: {e}")
+            except httpx.WriteTimeout as e:
+                logger.debug(f"Write timeout while checking endpoint health: {e}")
+            except httpx.TimeoutException as e:
+                logger.debug(f"Timeout while checking endpoint health: {e}")
+            except ssl.SSLError as e:
+                logger.warning(f"SSL error while checking endpoint health: {e}")
+            except Exception as e:
+                logger.warning(f"Unexpected error while checking endpoint health: {e}")
+
+            # Only log every 10 attempts to avoid flooding the logs
+            if attempts % 10 == 0:
+                logger.info(f"Still waiting for endpoint {endpoint_url} to become healthy (attempt {attempts}/{max_attempts})")
+
             await asyncio.sleep(1)
+
+        logger.error(f"Endpoint {endpoint_url} is not healthy after {max_attempts} attempts")
         return False  # timeout waiting for model readiness
 
     @staticmethod
