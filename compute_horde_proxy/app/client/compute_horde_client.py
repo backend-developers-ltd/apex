@@ -53,11 +53,11 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
         Returns:
             A new ComputeHordeVLLMClient instance.
         """
-        wallet = bittensor.wallet(name="validator", hotkey="default", path=(pathlib.Path(__file__).parent.parent / "wallets").as_posix())
+        wallet = bittensor.wallet(name=os.environ["BITTENSOR_WALLET_NAME"], hotkey=os.environ["BITTENSOR_WALLET_HOTKEY"], path=(pathlib.Path(__file__).parent.parent / "wallets").as_posix())
         facilitator_url = os.environ["COMPUTE_HORDE_FACILITATOR_URL"]
         client = ComputeHordeClient(
             hotkey=wallet.hotkey,
-            compute_horde_validator_hotkey=wallet.hotkey.ss58_address,
+            compute_horde_validator_hotkey=os.environ["COMPUTE_HORDE_VALIDATOR_HOTKEY"],
             facilitator_url=facilitator_url
         )
 
@@ -73,7 +73,7 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
         if model_specific_env_var in os.environ:
             docker_image = os.environ[model_specific_env_var]
         else:
-            docker_image = os.environ["DEFAULT_DOCKER_IMAGE_FORMAT"].format(model_id=docker_model_id)
+            docker_image = os.environ["DEFAULT_DOCKER_IMAGE"]
 
         # Get job spec parameters from environment variables
         # These are required in app.py validation
