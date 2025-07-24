@@ -77,7 +77,8 @@ async def startup_event():
         asyncio.create_task(check_clients_health())
 
         # Start background task to periodically run trusted verification
-        asyncio.create_task(run_trusted_verification_task())
+        # TODO enable for trusted verification
+        # asyncio.create_task(run_trusted_verification_task())
     except Exception as e:
         logger.error(f"Error during startup: {e}")
         # Don't exit the application, let it continue running with whatever was initialized successfully

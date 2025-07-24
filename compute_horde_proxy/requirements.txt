@@ -4,4 +4,4 @@ httpx
 cryptography
 loguru
 bittensor
-compute_horde_sdk
+git+https://github.com/backend-developers-ltd/ComputeHorde.git@a100#egg=compute_horde_sdk&subdirectory=compute_horde_sdk

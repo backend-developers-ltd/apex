@@ -118,7 +118,7 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
             # Create job spec
             try:
                 job_spec = ComputeHordeJobSpec(
-                    executor_class=ExecutorClass.always_on__llm__a6000,
+                    executor_class=ExecutorClass.always_on__gpu_a100_80gb,
                     job_namespace="SN1.VLLM",
                     docker_image=docker_image,
                     args=["python", "app.py"],
@@ -284,7 +284,3 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
             ctx = ssl.create_default_context(cafile=ca_file.name)
             ctx.load_cert_chain(certfile=cert_file.name, keyfile=key_file.name)
             return ctx
-
-    # The check_health method is inherited from BaseVLLMClient
-
-    # The proxy_request method is inherited from BaseVLLMClient
