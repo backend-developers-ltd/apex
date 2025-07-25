@@ -36,18 +36,18 @@ class RequestLog:
 
         # Create directories for storing request/response data
         self.base_log_dir = pathlib.Path(os.environ.get("REQUEST_LOG_DIR", "request_logs"))
-        self.base_client_log_dir = self.base_log_dir / "base_client"
-        self.compute_horde_log_dir = self.base_log_dir / "compute_horde_client"
-        self.comparison_log_file = self.base_log_dir / "comparison_results.log"
+        self.base_client_log_dir = self.base_log_dir / "local"
+        self.compute_horde_log_dir = self.base_log_dir / "compute_horde"
+        #self.comparison_log_file = self.base_log_dir / "comparison_results.log"
 
         # Create directories if they don't exist
         self.base_client_log_dir.mkdir(parents=True, exist_ok=True)
         self.compute_horde_log_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize comparison log file if it doesn't exist
-        if not self.comparison_log_file.exists():
-            with open(self.comparison_log_file, 'w') as f:
-                f.write("timestamp,request_id,model_id,endpoint,comparison_result\n")
+        # if not self.comparison_log_file.exists():
+        #     with open(self.comparison_log_file, 'w') as f:
+        #         f.write("timestamp,request_id,model_id,endpoint,comparison_result\n")
 
     async def add_record(self, model_id: str, endpoint: str, method: str, request_body: Dict[str, Any], 
                          response: Dict[str, Any], client_type: str, miner_id: Optional[str] = None, 
