@@ -45,18 +45,16 @@ async def proxy_endpoint(request: Request, path: str):
     body = await request.json() if method in ["POST"] and await request.body() else None
 
     # Check if parallel verification is enabled
-    parallel_verification = request.app.state.request_log.parallel_verification
-    parallel_response = None
+    parallel_verification = True
 
     # Record ID for tracking the same request across different clients
-    record_id = None
+
+    # Use the provided record_id or generate a new one
+    record_id = str(uuid.uuid4())
 
     # If parallel verification is enabled and client is a local client,
     # also send the request to a compute horde client for verification
     if parallel_verification and isinstance(client, BaseVLLMClient) and not isinstance(client, ComputeHordeVLLMClient):
-        # Generate a record ID for this request
-        record_id = str(uuid.uuid4())
-
         # Send request to compute horde client in parallel
         asyncio.create_task(
             verify_with_compute_horde_client(request, path, method, body, model_id, record_id)
@@ -70,10 +68,6 @@ async def proxy_endpoint(request: Request, path: str):
         # Create directories if they don't exist
         log_dir = pathlib.Path("request_logs/local")
         log_dir.mkdir(parents=True, exist_ok=True)
-
-        # Use the provided record_id or generate a new one
-        if record_id is None:
-            record_id = str(uuid.uuid4())
 
         # Create a JSON file with the record data
         record_data = {

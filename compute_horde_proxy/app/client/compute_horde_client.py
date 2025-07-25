@@ -121,7 +121,7 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
                     executor_class=ExecutorClass.always_on__gpu_a100_80gb,
                     job_namespace="SN1.VLLM",
                     docker_image=docker_image,
-                    args=["python", "app.py"],
+                    args=[],
                     artifacts_dir="/artifacts",
                     streaming=True,
                     download_time_limit_sec=download_time_limit_sec,
