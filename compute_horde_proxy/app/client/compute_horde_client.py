@@ -223,7 +223,8 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
                         logger.info(f"ComputeHordeVLLMClient Endpoint {endpoint_url} is healthy (status code: 200)")
                         return True
                     else:
-                        logger.warning(f"ComputeHordeVLLMClient Endpoint {endpoint_url} returned non-200 status code: {resp.status_code}")
+                        # logger.warning(f"ComputeHordeVLLMClient Endpoint {endpoint_url} returned non-200 status code: {resp.status_code}")
+                        pass
             except httpx.ConnectError as e:
                 logger.debug(f"Connection error while checking endpoint health: {e}")
             except httpx.ReadTimeout as e:

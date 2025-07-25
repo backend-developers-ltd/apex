@@ -43,7 +43,7 @@ class BaseVLLMClient:
                 if self._ready:
                     self.needs_reconnect = False
         except Exception as e:
-            logger.error(f"Health check failed for {self.model_id}: {str(e)}")
+            # logger.error(f"Health check failed for {self.model_id}: {str(e)}")
             self._ready = False
             if not self.local:
                 self.needs_reconnect = True
