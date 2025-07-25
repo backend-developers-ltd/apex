@@ -78,7 +78,7 @@ async def proxy_endpoint(request: Request, path: str):
             "method": method,
             "request_body": body,
             "response": response,
-            "client_type": "base"
+            "client_type": "local"
         }
 
         # Save the JSON file
@@ -86,7 +86,7 @@ async def proxy_endpoint(request: Request, path: str):
         with open(file_path, 'w') as f:
             json.dump(record_data, f, indent=2)
 
-        logger.debug(f"Saved local request/response record to {file_path}")
+        logger.debug(f"BaseVLLMClient response {file_path}")
 
     # Record the request and response if client is ComputeHordeVLLMClient
     if isinstance(client, ComputeHordeVLLMClient):

@@ -85,10 +85,6 @@ async def verify_with_compute_horde_client(request, path, method, body, model_id
         log_dir = pathlib.Path("request_logs/compute_horde")
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Use the provided record_id or generate a new one
-        if record_id is None:
-            record_id = str(uuid.uuid4())
-
         # Create a JSON file with the record data
         record_data = {
             "id": record_id,
@@ -106,7 +102,7 @@ async def verify_with_compute_horde_client(request, path, method, body, model_id
         with open(file_path, 'w') as f:
             json.dump(record_data, f, indent=2)
 
-        logger.debug(f"Saved compute horde request/response record to {file_path}")
+        logger.debug(f"ComputeHordeVLLMClient response {file_path}")
 
     except Exception as e:
         logger.error(f"Error in parallel verification: {e}")

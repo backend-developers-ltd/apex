@@ -166,13 +166,8 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
                 raise
 
             # Set the miner ID from the job
-            miner_id = job.uuid  # TODO actual method to get
-            if not miner_id:
-                # If miner_id is not available directly, try to extract it from other attributes
-                miner_id = str(uuid.uuid4())  # Fallback to a random UUID
-                logger.warning(f"Could not get miner ID from job, using fallback: {miner_id}")
-            else:
-                logger.debug(f"Using miner ID from job: {miner_id}")
+            miner_id = job.uuid
+            logger.debug(f"Using miner ID from job: {miner_id}")
 
             # Create instance
             try:
@@ -190,9 +185,9 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
 
             # Check if the remote model is ready
             try:
-                logger.info("Checking if remote model is ready...")
+                logger.info("Checking if ComputeHordeVLLMClient model is ready...")
                 instance._ready = await cls.check_endpoint_health(miner_url, ssl_context)
-                logger.info(f"Remote model is {'ready' if instance._ready else 'not ready'}")
+                logger.info(f"ComputeHordeVLLMClient is {'ready' if instance._ready else 'not ready'}")
             except Exception as e:
                 logger.error(f"Failed to check if remote model is ready: {e}")
                 instance._ready = False
@@ -225,10 +220,10 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
                     logger.debug(f"Attempt {attempts}/{max_attempts}: Sending health check request to {endpoint_url}/health/model")
                     resp = await client.get(f"{endpoint_url}/health/model", timeout=3)
                     if resp.status_code == 200:
-                        logger.info(f"Endpoint {endpoint_url} is healthy (status code: 200)")
+                        logger.info(f"ComputeHordeVLLMClient Endpoint {endpoint_url} is healthy (status code: 200)")
                         return True
                     else:
-                        logger.warning(f"Endpoint {endpoint_url} returned non-200 status code: {resp.status_code}")
+                        logger.warning(f"ComputeHordeVLLMClient Endpoint {endpoint_url} returned non-200 status code: {resp.status_code}")
             except httpx.ConnectError as e:
                 logger.debug(f"Connection error while checking endpoint health: {e}")
             except httpx.ReadTimeout as e:
@@ -248,7 +243,7 @@ class ComputeHordeVLLMClient(BaseVLLMClient):
 
             await asyncio.sleep(1)
 
-        logger.error(f"Endpoint {endpoint_url} is not healthy after {max_attempts} attempts")
+        logger.error(f"ComputeHordeVLLMClient failed after {max_attempts} attempts")
         return False  # timeout waiting for model readiness
 
     @staticmethod
